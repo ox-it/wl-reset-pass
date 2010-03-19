@@ -49,6 +49,12 @@
         <artifactId>joda-time</artifactId>
         <version>2.3</version>
     </dependency>
+    <dependency>
+      <groupId>org.sakaiproject.sitemanage</groupId>
+      <artifactId>sakai-site-manage-api</artifactId>
+      <version>${sakai.version}</version>
+      <scope>provided</scope>
+    </dependency>
 <!-- RSF dependencies -->
     <dependency>
       <groupId>uk.org.ponder.sakairsf</groupId>
