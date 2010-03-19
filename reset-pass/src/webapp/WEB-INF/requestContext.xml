@@ -18,6 +18,8 @@
 			ref="org.sakaiproject.event.api.EventTrackingService" />
 		<property name="securityService"
 			ref="org.sakaiproject.authz.api.SecurityService" />
+		<property name="passwordGenerator"
+			ref="org.sakaiproject.sitemanage.api.PasswordGenerator" />
 
 	</bean>
 
