@@ -91,7 +91,7 @@ public class FormHandler {
 			if (va == null) {
 				//we need to validate the account.
 				m_log.debug("This is a legacy user to validate!");
-				validationLogic.createValidationAccount(userBean.getUser().getId(), ValidationAccount.ACCOUNT_STATUS_LEGACY_NOPASS);
+				validationLogic.createValidationAccount(userBean.getUser().getId(), ValidationAccount.ACCOUNT_STATUS_PASSWORD_RESET);
 			} else {
 				m_log.debug("resending validation");
 				validationLogic.resendValidation(va.getValidationToken());
@@ -133,24 +133,26 @@ public class FormHandler {
 		}
 
 		//now we need to reset the password
+		SecurityAdvisor sa = new SecurityAdvisor() {
+			public SecurityAdvice isAllowed(String userId, String function, String reference) {
+				if (SECURE_UPDATE_USER_ANY.equals(function)) {
+					return SecurityAdvice.ALLOWED;
+				}
+				return SecurityAdvice.PASS;
+			}
+		};
+		
 		try {
 
 			// Need: SECURE_UPDATE_USER_ANY
-			securityService.pushAdvisor(new SecurityAdvisor() {
-				public SecurityAdvice isAllowed(String userId, String function, String reference) {
-					if (SECURE_UPDATE_USER_ANY.equals(function)) {
-						return SecurityAdvice.ALLOWED;
-					}
-					return SecurityAdvice.PASS;
-				}
-			});
+			securityService.pushAdvisor(sa);
 
 			UserEdit userE = userDirectoryService.editUser(userBean.getUser().getId().trim());
 			String pass = getRandPass();
 			userE.setPassword(pass);
 			userDirectoryService.commitEdit(userE);
 
-			securityService.popAdvisor();
+			//securityService.popAdvisor(sa);
 
 			String productionSiteName = serverConfigurationService.getString("ui.service", "");
 
@@ -188,7 +190,7 @@ public class FormHandler {
 			return null;
 		}
 		finally {
-			securityService.popAdvisor();
+			securityService.popAdvisor(sa);
 		}
 
 		return "Success";
