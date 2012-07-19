@@ -426,7 +426,7 @@ public class ValidationLogicImpl implements ValidationLogic {
 
 		
 		
-		emailTemplateService.sendRenderedMessages(templateKey , userReferences, replacementValues, serverConfigurationService.getString("support.email"), serverConfigurationService.getString("support.email"));
+		emailTemplateService.sendRenderedMessages(templateKey , userReferences, replacementValues, serverConfigurationService.getString("support.email"), serverConfigurationService.getString("support.name"));
 		v.setValidationSent(new Date());
 		v.setStatus(ValidationAccount.STATUS_SENT);
 		
@@ -703,7 +703,7 @@ public class ValidationLogicImpl implements ValidationLogic {
 		String templateKey = getTemplateKey(account.getAccountStatus());
 		
 		
-		emailTemplateService.sendRenderedMessages(templateKey , userReferences, replacementValues, serverConfigurationService.getString("support.email"), serverConfigurationService.getString("support.email"));
+		emailTemplateService.sendRenderedMessages(templateKey , userReferences, replacementValues, serverConfigurationService.getString("support.email"), serverConfigurationService.getString("support.name"));
 	}
 
 
