@@ -42,16 +42,7 @@ import org.sakaiproject.user.api.UserNotDefinedException;
 
 import uk.org.ponder.messageutil.TargettedMessage;
 import uk.org.ponder.messageutil.TargettedMessageList;
-import uk.org.ponder.rsf.components.UIBoundBoolean;
-import uk.org.ponder.rsf.components.UIBranchContainer;
-import uk.org.ponder.rsf.components.UICommand;
-import uk.org.ponder.rsf.components.UIContainer;
-import uk.org.ponder.rsf.components.UIELBinding;
-import uk.org.ponder.rsf.components.UIForm;
-import uk.org.ponder.rsf.components.UIInput;
-import uk.org.ponder.rsf.components.UIMessage;
-import uk.org.ponder.rsf.components.UIOutput;
-import uk.org.ponder.rsf.components.UIVerbatim;
+import uk.org.ponder.rsf.components.*;
 import uk.org.ponder.rsf.flow.ARIResult;
 import uk.org.ponder.rsf.flow.ActionResultInterceptor;
 import uk.org.ponder.rsf.view.ComponentChecker;
@@ -276,6 +267,7 @@ ViewParamsReporter, ActionResultInterceptor {
 			UIInput.make(claimForm, "userName", "claimLocator.new_1.userEid");
 			UIInput.make(claimForm, "password", "claimLocator.new_1.password1");
 			UICommand.make(claimForm, "submitClaim", UIMessage.make("submit.login"), "claimLocator.claimAccount");
+            UILink.make(claimForm, "resetPasswordLink", UIMessage.make("reset.link"), serverConfigurationService.getString("password.reset.url"));
 			claimForm.parameters.add(new UIELBinding("claimLocator.new_1.validationToken", va.getValidationToken()));
 
 
