@@ -198,8 +198,6 @@ public class NewUserProducer extends BaseValidationProducer implements ViewCompo
 			UIVerbatim.make(termsRow, "termsLabel", terms);
 		}
 
-		addResetPassLink(tofill, va);
-
 		detailsForm.parameters.add(new UIELBinding(otp + ".userId", va.getUserId()));
 	}
 }
