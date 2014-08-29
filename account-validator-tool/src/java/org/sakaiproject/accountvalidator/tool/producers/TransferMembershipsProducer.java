@@ -171,6 +171,8 @@ public class TransferMembershipsProducer extends BaseValidationProducer implemen
 			}
 		}
 
+		addResetPassLink(tofill, va);
+
 		Object[] displayIdArgs = new Object[]{u.getDisplayId()};
 		UIForm claimForm = UIForm.make(tofill, "claimAccountForm");
 		UIMessage.make(claimForm, "validate.loginexisting", "validate.loginexisting.accountReserved", displayIdArgs);
