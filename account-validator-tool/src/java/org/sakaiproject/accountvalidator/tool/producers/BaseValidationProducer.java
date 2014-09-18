@@ -8,7 +8,10 @@ import org.sakaiproject.accountvalidator.tool.params.ValidationViewParams;
 import org.sakaiproject.authz.api.AuthzGroupService;
 import org.sakaiproject.component.api.ServerConfigurationService;
 import org.sakaiproject.entitybroker.DeveloperHelperService;
+import org.sakaiproject.exception.IdUnusedException;
+import org.sakaiproject.site.api.Site;
 import org.sakaiproject.site.api.SiteService;
+import org.sakaiproject.site.api.ToolConfiguration;
 import org.sakaiproject.user.api.UserDirectoryService;
 
 import uk.org.ponder.messageutil.TargettedMessage;
@@ -139,7 +142,7 @@ public class BaseValidationProducer implements ViewParamsReporter
 		try
 		{
 			//get the link target
-			url = developerHelperService.getToolViewURL("sakai.resetpass", null, null, developerHelperService.getStartingLocationReference());
+			url = getPasswordResetUrl();
 		}
 		catch (IllegalArgumentException e)
 		{
@@ -165,6 +168,37 @@ public class BaseValidationProducer implements ViewParamsReporter
 			UILink.make(requestAnotherContainer, "request.another", requestAnother, url);
 		}
 		//else - there is no reset pass instance on the gateway, but the user sees an appropriate message regardless (handled by a targetted message)
+	}
+
+	/**
+	 * Gets the password reset URL. If looks for a configured URL, otherwise it looks
+	 * for the password reset tool in the gateway site and builds a link to that.
+	 * @return The password reset URL or <code>null</code> if there isn't one or we
+	 * can't find the password reset tool.
+	 */
+	public String getPasswordResetUrl()
+	{
+		// Has a password reset url been specified in sakai.properties? If so, it rules.
+		String passwordResetUrl = serverConfigurationService.getString("login.password.reset.url", null);
+
+		if(passwordResetUrl == null) {
+			// No explicit password reset url. Try and locate the tool on the gateway page.
+			// If it has been  installed we'll use it.
+			String gatewaySiteId = serverConfigurationService.getGatewaySiteId();
+			Site gatewaySite = null;
+			try {
+				gatewaySite = siteService.getSite(gatewaySiteId);
+			} catch (IdUnusedException e) {
+				log.warn("No " + gatewaySiteId + " site found whilst building password reset url, set password.reset.url" +
+						" or create " + gatewaySiteId + " and add password reset tool.");
+
+			}
+			ToolConfiguration resetTC = gatewaySite.getToolForCommonId("sakai.resetpass");
+			if(resetTC != null) {
+				passwordResetUrl = resetTC.getContainingPage().getUrl();
+			}
+		}
+		return passwordResetUrl;
 	}
 
 	/**
