@@ -188,14 +188,13 @@ public class BaseValidationProducer implements ViewParamsReporter
 			Site gatewaySite = null;
 			try {
 				gatewaySite = siteService.getSite(gatewaySiteId);
+				ToolConfiguration resetTC = gatewaySite.getToolForCommonId("sakai.resetpass");
+				if(resetTC != null) {
+					passwordResetUrl = resetTC.getContainingPage().getUrl();
+				}
 			} catch (IdUnusedException e) {
 				log.warn("No " + gatewaySiteId + " site found whilst building password reset url, set password.reset.url" +
 						" or create " + gatewaySiteId + " and add password reset tool.");
-
-			}
-			ToolConfiguration resetTC = gatewaySite.getToolForCommonId("sakai.resetpass");
-			if(resetTC != null) {
-				passwordResetUrl = resetTC.getContainingPage().getUrl();
 			}
 		}
 		return passwordResetUrl;
