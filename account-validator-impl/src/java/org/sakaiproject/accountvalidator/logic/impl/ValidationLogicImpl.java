@@ -85,6 +85,7 @@ public class ValidationLogicImpl implements ValidationLogic {
 	private static final String TEMPLATE_KEY_NEW_USER = "validate.newUser";
 	private static final String TEMPLATE_KEY_LEGACYUSER = "validate.legacyuser";
 	private static final String TEMPLATE_KEY_PASSWORDRESET = "validate.passwordreset";
+	private static final String TEMPLATE_KEY_USERIDUPDATE = "validate.userId.update";
 	
 	private static final int VALIDATION_PERIOD_MONTHS = -36;
 	private static Log log = LogFactory.getLog(ValidationLogicImpl.class);
@@ -98,6 +99,7 @@ public class ValidationLogicImpl implements ValidationLogic {
 		loadTemplate("validate_existingUser.xml", TEMPLATE_KEY_EXISTINGUSER);
 		loadTemplate("validate_legacyUser.xml", TEMPLATE_KEY_LEGACYUSER);
 		loadTemplate("validate_newPassword.xml", TEMPLATE_KEY_PASSWORDRESET);
+		loadTemplate("validate_userIdUpdate.xml", TEMPLATE_KEY_USERIDUPDATE);
 		
 		//seeing the GroupProvider is optional we need to load it here
 		if (groupProvider == null) {
@@ -323,9 +325,22 @@ public class ValidationLogicImpl implements ValidationLogic {
 		
 		return createValidationAccount(UserId, status);
 	}
+	
+	public ValidationAccount createValidationAccount(String userRef, String newUserId) {
+		ValidationAccount account = new ValidationAccount();
+		account.setUserId(userRef);
+		account.setValidationToken(idManager.createUuid());
+		account.setValidationsSent(1);
+		account.setAccountStatus(ValidationAccount.ACCOUNT_STATUS_USERID_UPDATE);
+		if(newUserId != null && newUserId.length() > 0){
+			account.setEid(newUserId);
+		}
+		sendEmailTemplate(account, newUserId);
+		account = saveValidationAccount(account);
+		return account;
+	}
 
-	
-	
+
 	public ValidationAccount createValidationAccount(String userRef,
 			Integer accountStatus) {
 		log.debug("createValidationAccount(" + userRef + ", " + accountStatus);
@@ -337,98 +352,13 @@ public class ValidationLogicImpl implements ValidationLogic {
 		v.setUserId(userRef);
 		v.setValidationToken(idManager.createUuid());
 		v.setValidationsSent(1);
-		
 		if (accountStatus == null) {
-			accountStatus = ValidationAccount.ACCOUNT_STATUS_NEW;
+			v.setAccountStatus(ValidationAccount.ACCOUNT_STATUS_NEW);
 		} else {
 			v.setAccountStatus(accountStatus);
 		}
+		sendEmailTemplate(v, null);
 		
-		
-		//new send the validation
-		List<String> userReferences = new ArrayList<String>();
-		userReferences.add(userRef);
-		Map<String, String> replacementValues = new HashMap<String, String>();
-		replacementValues.put("validationToken", v.getValidationToken());
-		
-		//get the url
-		Map<String, String> parameters = new  HashMap<String, String>();
-		parameters.put("tokenId", v.getValidationToken());
-		
-		///we want a direct tool url
-		String serverUrl = serverConfigurationService.getServerUrl();
-		String page = getPageForAccountStatus(accountStatus);
-		String url = serverUrl + "/accountvalidator/faces/" + page + "?tokenId=" + v.getValidationToken();
-		
-		
-		replacementValues.put("url", url);
-		//add some details about the user
-		String userId = EntityReference.getIdFromRef(userRef);
-		String userFirstName = "";
-		String userLastName = "";
-		String userDisplayName = "";
-		String userEid = "";
-			
-		try {
-			User u = userDirectoryService.getUser(userId);
-			if (u.getFirstName() != null)
-				userFirstName = u.getFirstName();
-			
-			if (u.getLastName() != null)
-				userLastName = u.getLastName();
-			
-			
-			userDisplayName = u.getDisplayName();
-			
-			userEid = u.getEid();
-			//information about the user that added them
-			User added = u.getCreatedBy();
-			replacementValues.put("addedBy", added.getDisplayName());
-			replacementValues.put("addedByEmail", added.getEmail());
-			
-		} catch (UserNotDefinedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		
-		
-		
-		//information about the site(s) they have been added to
-		Set<String> groups = authzGroupService.getAuthzGroupsIsAllowed(userId, SiteService.SITE_VISIT, null);
-		log.info("got a list of: " + groups.size());
-		Iterator<String> itg = groups.iterator();
-		StringBuilder sb = new StringBuilder();
-		int siteCount = 0;
-		while (itg.hasNext()) {
-			String groupRef = itg.next();
-			String siteId = developerHelperService.getLocationIdFromRef(groupRef);
-			try {
-				Site s = siteService.getSite(siteId);
-				if (siteCount > 0) {
-					sb.append(", ");
-				}
-				log.info("adding site: " + s.getTitle());
-				sb.append(s.getTitle());
-				siteCount++;
-			} catch (IdUnusedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			
-		}
-		replacementValues.put("memberSites", sb.toString());
-		replacementValues.put("displayName", userDisplayName);
-		replacementValues.put("userEid", userEid);
-		replacementValues.put("support.email", serverConfigurationService.getString("support.email"));
-		replacementValues.put("institution", serverConfigurationService.getString("ui.institution"));
-		String templateKey = getTemplateKey(accountStatus);
-
-		
-		
-		emailTemplateService.sendRenderedMessages(templateKey , userReferences, replacementValues, serverConfigurationService.getString("support.email"), serverConfigurationService.getString("support.name"));
-		v.setValidationSent(new Date());
-		v.setStatus(ValidationAccount.STATUS_SENT);
 		
 		/*if (ValidationAccount.ACCOUNT_STATUS_PASSWORD_RESET == accountStatus.intValue()) {
 			//A password reset doesn't invalidate confirmation
@@ -436,11 +366,28 @@ public class ValidationLogicImpl implements ValidationLogic {
 		} else { 
 			v.setStatus(ValidationAccount.STATUS_SENT);
 		}*/
-		v.setFirstName(userFirstName);
-		v.setSurname(userLastName);
-		
-		dao.save(v);
+		v = saveValidationAccount(v);
 		return v;
+	}
+	//Set other details for ValidationAccount and save
+	private ValidationAccount saveValidationAccount(ValidationAccount account){
+		account.setValidationSent(new Date());
+		account.setStatus(ValidationAccount.STATUS_SENT);
+		String userId = EntityReference.getIdFromRef(account.getUserId());
+		try{
+			User u = userDirectoryService.getUser(userId);
+			if (u.getFirstName() != null)
+				account.setFirstName(u.getFirstName());
+
+			if (u.getLastName() != null)
+				account.setSurname(u.getLastName());
+		}
+		catch(UserNotDefinedException e){
+			e.printStackTrace();
+
+		}
+		dao.save(account);
+		return account;
 	}
 
 	/**
@@ -482,6 +429,8 @@ public class ValidationLogicImpl implements ValidationLogic {
 			templateKey  = TEMPLATE_KEY_LEGACYUSER;
 		} else if ( (ValidationAccount.ACCOUNT_STATUS_PASSWORD_RESET == accountStatus.intValue())) {
 			templateKey  = TEMPLATE_KEY_PASSWORDRESET;
+		} else if ( (ValidationAccount.ACCOUNT_STATUS_USERID_UPDATE == accountStatus.intValue())) {
+			templateKey = TEMPLATE_KEY_USERIDUPDATE;
 		}
 		return templateKey;
 	}
@@ -626,55 +575,61 @@ public class ValidationLogicImpl implements ValidationLogic {
 		account.setValidationsSent(account.getValidationsSent() + 1);
 		account.setStatus(ValidationAccount.STATUS_RESENT);
 		save(account);
+		sendEmailTemplate(account,null);
+	}
+	private void sendEmailTemplate(ValidationAccount account, String newUserId){
 		
 		//new send the validation
 		List<String> userReferences = new ArrayList<String>();
-		
-		
+
+
 		userReferences.add(userDirectoryService.userReference(account.getUserId()));
 		Map<String, String> replacementValues = new HashMap<String, String>();
 		replacementValues.put("validationToken", account.getValidationToken());
-		
+
 		//get the url
 		Map<String, String> parameters = new  HashMap<String, String>();
 		parameters.put("tokenId", account.getValidationToken());
-		
+
 		///we want a direct tool url
 		String page = getPageForAccountStatus(account.getAccountStatus());
 		String serverUrl = serverConfigurationService.getServerUrl();
 		String url = serverUrl + "/accountvalidator/faces/" + page + "?tokenId=" + account.getValidationToken();
-		
-		
+
+
 		replacementValues.put("url", url);
 		//add some details about the user
 		String userId = EntityReference.getIdFromRef(account.getUserId());
 		String userDisplayName = "";
 		String userEid = "";
-			
+
 		try {
 			User u = userDirectoryService.getUser(userId);
-			
-			
+
+
 			userDisplayName = u.getDisplayName();
-			
+
 			userEid = u.getEid();
 			//information about the user that added them
 			User added = u.getCreatedBy();
 			replacementValues.put("addedBy", added.getDisplayName());
 			replacementValues.put("addedByEmail", added.getEmail());
+			if(newUserId != null && newUserId.length()>0 && ValidationAccount.ACCOUNT_STATUS_USERID_UPDATE==account.getAccountStatus()) {
+				replacementValues.put("newUserId",newUserId);
+			}
 			replacementValues.put("displayName", userDisplayName);
 			replacementValues.put("userEid", userEid);
-			replacementValues.put("support.email", serverConfigurationService.getString("support.email"));
+			replacementValues.put("supportemail", serverConfigurationService.getString("support.email"));
 			replacementValues.put("institution", serverConfigurationService.getString("ui.institution"));
-			
+
 		} catch (UserNotDefinedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
-		
-		
-		
+
+
+
+
 		//information about the site(s) they have been added to
 		Set<String> groups = authzGroupService.getAuthzGroupsIsAllowed(userId, SiteService.SITE_VISIT, null);
 		log.debug("got a list of: " + groups.size());
@@ -696,13 +651,13 @@ public class ValidationLogicImpl implements ValidationLogic {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			
+
 		}
 		replacementValues.put("memberSites", sb.toString());
-		
+
 		String templateKey = getTemplateKey(account.getAccountStatus());
-		
-		
+
+
 		emailTemplateService.sendRenderedMessages(templateKey , userReferences, replacementValues, serverConfigurationService.getString("support.email"), serverConfigurationService.getString("support.name"));
 	}
 
