@@ -104,7 +104,13 @@ VALIDATOR.validatePassword = function() {
 // Verify the passwords match
 VALIDATOR.verifyPasswordsMatch = function() {
 	var pw = VALIDATOR.get("passrow1::password1").value;
-	var pw2 = VALIDATOR.get("passrow2::password2").value;
+	if(VALIDATOR.get("passrow2::password2")) {
+		var pw2 = VALIDATOR.get("passrow2::password2").value;
+	}
+	else {
+		var pw2 = pw;
+	}
+
 	var matchMsg = VALIDATOR.get("matchMsg");
 	var noMatchMsg = VALIDATOR.get("noMatchMsg");
 	
@@ -229,6 +235,10 @@ VALIDATOR.display = function(element, show) {
 
 // Original document ready function
 $(document).ready(function() {
+    /* Hide div with yellow background if it is empty */
+    if ($('.yellowBackground').html().trim() == ''){
+	   $('.yellowBackground').hide();
+    }
     if ($("form").length === 0) {
         $("table").remove();
         return false;

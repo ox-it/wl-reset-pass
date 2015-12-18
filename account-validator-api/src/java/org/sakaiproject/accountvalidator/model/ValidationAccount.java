@@ -58,8 +58,12 @@ public class ValidationAccount {
 	 * Status for a password reset
 	 */
 	public static final int ACCOUNT_STATUS_PASSWORD_RESET = 5;
+
+	/**
+	 * Status for userId updation
+	 */
 	
-	
+	public static final int ACCOUNT_STATUS_USERID_UPDATE = 6;
 	
 	private Long id;
 	private String userId;
