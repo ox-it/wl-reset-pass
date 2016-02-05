@@ -235,8 +235,8 @@ VALIDATOR.display = function(element, show) {
 
 // Original document ready function
 $(document).ready(function() {
-    /* Hide div with yellow background if it is empty */
-    if ($('.yellowBackground').html().trim() == ''){
+    /* Hide div with yellow background if it is not null and is empty */
+    if (($('.yellowBackground').length > 0) && ($('.yellowBackground').html().trim() == '')){
 	   $('.yellowBackground').hide();
     }
     if ($("form").length === 0) {
