@@ -57,6 +57,7 @@ import org.sakaiproject.authz.api.SecurityService;
 import org.sakaiproject.authz.api.SecurityAdvisor.SecurityAdvice;
 import org.sakaiproject.component.api.ServerConfigurationService;
 import org.sakaiproject.component.cover.ComponentManager;
+import org.sakaiproject.emailtemplateservice.model.RenderedTemplate;
 import org.sakaiproject.emailtemplateservice.service.EmailTemplateService;
 import org.sakaiproject.emailtemplateservice.model.EmailTemplate;
 import org.sakaiproject.entitybroker.DeveloperHelperService;
@@ -580,10 +581,9 @@ public class ValidationLogicImpl implements ValidationLogic {
 	private void sendEmailTemplate(ValidationAccount account, String newUserId){
 		
 		//new send the validation
-		List<String> userReferences = new ArrayList<String>();
-
-
-		userReferences.add(userDirectoryService.userReference(account.getUserId()));
+		String userReference = userDirectoryService.userReference(account.getUserId());
+		List<String> userIds = new ArrayList<String>();
+		List<String> emailAddresses = new ArrayList<String>();
 		Map<String, String> replacementValues = new HashMap<String, String>();
 		replacementValues.put("validationToken", account.getValidationToken());
 
@@ -600,6 +600,7 @@ public class ValidationLogicImpl implements ValidationLogic {
 		replacementValues.put("url", url);
 		//add some details about the user
 		String userId = EntityReference.getIdFromRef(account.getUserId());
+		userIds.add(userId);
 		String userDisplayName = "";
 		String userEid = "";
 
@@ -616,6 +617,7 @@ public class ValidationLogicImpl implements ValidationLogic {
 			replacementValues.put("addedByEmail", added.getEmail());
 			if(newUserId != null && newUserId.length()>0 && ValidationAccount.ACCOUNT_STATUS_USERID_UPDATE==account.getAccountStatus()) {
 				replacementValues.put("newUserId",newUserId);
+				emailAddresses.add(newUserId);
 			}
 			replacementValues.put("displayName", userDisplayName);
 			replacementValues.put("userEid", userEid);
@@ -657,8 +659,8 @@ public class ValidationLogicImpl implements ValidationLogic {
 
 		String templateKey = getTemplateKey(account.getAccountStatus());
 
-
-		emailTemplateService.sendRenderedMessages(templateKey , userReferences, replacementValues, serverConfigurationService.getString("support.email"), serverConfigurationService.getString("support.name"));
+		RenderedTemplate renderedTemplate = emailTemplateService.getRenderedTemplateForUser(templateKey, userReference, replacementValues);
+		emailTemplateService.sendMessage(userIds,emailAddresses, renderedTemplate, serverConfigurationService.getString("support.email"), serverConfigurationService.getString("support.name"));
 	}
 
 
